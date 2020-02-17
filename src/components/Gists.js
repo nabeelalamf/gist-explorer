@@ -7,7 +7,7 @@ import { TEXT, PYTHON, XML } from '../config/constants/FileTypes';
 class Gists extends Component {
   state = {
     message: 'Loading gists',
-    gists: []
+    gists: {}
   };
   
   componentDidMount() {
@@ -24,7 +24,7 @@ class Gists extends Component {
       return Promise.reject();
     }).then((data) => {
       // Load gist data
-      let gists = [];
+      let gists = {};
 
       // Create list of gists
       if (data.length > 0) {
@@ -54,12 +54,11 @@ class Gists extends Component {
             });
           });
 
-          gists.push({
-            url: gist.url,
+          gists[gist.id] = {
+            ...gist,
             username: gist.owner.login,
-            comments: gist.comments,
             files: files,
-          });
+          }
         });
       } else {
         this.setState({ message: 'No gists found' });
@@ -76,8 +75,8 @@ class Gists extends Component {
   // UI functions //
 
   getGistList = () => {
-    return this.state.gists.length > 0 ? (
-      this.state.gists.map((gist) => {
+    return Object.keys(this.state.gists).length > 0 ? (
+      Object.values(this.state.gists).map((gist) => {
         return (
           <Gist gist={ gist } />
         );
