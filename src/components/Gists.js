@@ -57,6 +57,7 @@ class Gists extends Component {
           gists[gist.id] = {
             ...gist,
             username: gist.owner.login,
+            forks: [],
             files: files,
           }
         });
@@ -65,6 +66,18 @@ class Gists extends Component {
       }
       console.log(gists);
       this.setState({ gists: gists });
+
+      // FETCH FORKS //
+
+      Object.values(gists).forEach(gist => {
+        fetch(gist.forks_url).then(res => res.json())
+          .then(data => {
+            console.log('Forks: ', data);
+            gists[gist.id].forks = data;
+            this.setState({ gists });
+          });
+      });
+
       return Promise.resolve();
     })
     .catch((res) => {
