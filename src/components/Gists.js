@@ -1,105 +1,89 @@
 import React, { Component } from 'react';
+import _ from 'lodash';
 import Container from '@material-ui/core/Container';
 import Grid from '@material-ui/core/Grid';
 import Gist from './Gist';
-import { TEXT, PYTHON, XML } from '../config/constants/FileTypes';
+import fileMap from '../constants/fileMap';
+import { getUserGistsUrl } from '../config/api';
 
 class Gists extends Component {
   state = {
-    message: 'Loading gists',
-    gists: {}
+    emptyMessage: 'Loading gists',
+    gists: []
   };
   
   componentDidMount() {
     // Load gists
-    let userId = this.props.match.params.user_id;
-    let url = 'https://api.github.com/users/' + userId + '/gists?page=0&per_page=10';
+    this.fetchGistData();
+  }
 
-    fetch(url).then((res) => {
-      // Check status
-      if (res.status >= 200 && res.status < 300) {
-        return res.json();
-      }
-      this.setState({ message: 'No gists found' });
-      return Promise.reject();
-    }).then((data) => {
-      // Load gist data
-      let gists = {};
+  fetchGistData() {
+    let userId = _.get(this.props, 'match.params.user_id');
+    let url = getUserGistsUrl(userId, 0, 10);
+    
+    fetch(url)
+      .then(res => {
+        // Check status
+        if (res.status >= 200 && res.status < 300) {
+          return res.json();
+        }
+        this.setState({ emptyMessage: 'Invalid username' });
+        return Promise.reject();
+      })
+      .then(data => {
+        if (data === undefined) {
+          console.log('Returned data is undefined');
+          return Promise.reject();
+        }
 
-      // Create list of gists
-      if (data.length > 0) {
-        data.forEach(gist => {
-          let files = [];
-          // Create list of files for each gist
-          Object.values(gist.files).forEach(file => {
-            let type = 'Unknown';
-
-            // Parse file type
-            switch(file.type) {
-              case TEXT:
-                type = "Text";
-                break;
-              case PYTHON:
-                type = "Python";
-                break;
-              case XML:
-                type = "XML";
-                break;
-            }
-
-            files.push({
-              filename: file.filename,
-              url: file.raw_url,
-              type: type
-            });
+        // Create a parsed list of gists
+        let gists = _.map(data, gist => {
+          // Create a new list of truncated file data for each gist
+          let files = _.map(gist.files, file => {
+            let type = _.get(fileMap, file.type, 'Unknown'); // Parsing file type
+            return { filename: file.filename, url: file.raw_url, type}; // Returning updated file object
           });
 
-          gists[gist.id] = {
-            ...gist,
-            username: gist.owner.login,
-            forks: [],
-            files: files,
-          }
+          // Returning updated gist data
+          return { ...gist, username: _.get(gist, 'owner.login', 'N/A'), forks: [], files };
         });
-      } else {
-        this.setState({ message: 'No gists found' });
-      }
-      console.log(gists);
-      this.setState({ gists: gists });
+        console.log(gists);
 
-      // FETCH FORKS //
+        this.setState(gists.length > 0 ? { gists } : { emptyMessage: 'No gists found' });
 
-      Object.values(gists).forEach(gist => {
-        fetch(gist.forks_url).then(res => res.json())
-          .then(data => {
-            console.log('Forks: ', data);
-            gists[gist.id].forks = data;
-            this.setState({ gists });
-          });
+        this.fetchForksData();
+
+        return Promise.resolve();
       });
+  }
 
-      return Promise.resolve();
-    })
-    .catch((res) => {
-      console.log(res);
+  fetchForksData() {
+    let gists = [...this.state.gists];
+    _.forEach(gists, (gist, i) => {
+      fetch(gist.forks_url).then(res => res.json())
+        .then(data => {
+          gists[i].forks = data;
+          this.setState({ gists });
+          return Promise.resolve();
+        });
     });
   }
   
   // UI functions //
 
   getGistList = () => {
-    return Object.keys(this.state.gists).length > 0 ? (
-      Object.values(this.state.gists).map((gist) => {
+    return _.size(this.state.gists) > 0 ? (
+      this.state.gists.map(gist => {
         return (
           <Gist gist={ gist } key={ gist.id } />
         );
       })
-    ) : ( <p>{ this.state.message }</p> );
+    ) : ( <p>{ this.state.emptyMessage }</p> );
   }
 
   render() {
     return (
-      <Container >
+      <Container>
         <Grid container
           direction='column'
           spacing={3}

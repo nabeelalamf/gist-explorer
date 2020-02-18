@@ -11,8 +11,6 @@ class SearchUser extends Component {
     user: ''
   };
 
-  const 
-
   handleSearchInput = (e) => {
     console.log(e.target.value);
     this.setState({ user: e.target.value });
