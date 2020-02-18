@@ -91,7 +91,7 @@ class Gists extends Component {
     return Object.keys(this.state.gists).length > 0 ? (
       Object.values(this.state.gists).map((gist) => {
         return (
-          <Gist gist={ gist } />
+          <Gist gist={ gist } key={ gist.id } />
         );
       })
     ) : ( <p>{ this.state.message }</p> );

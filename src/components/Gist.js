@@ -46,7 +46,7 @@ const Gist = ({ gist }) => {
           <ul>
             { gist.files.map(file => {
               return (
-                <li><File file={ file } /></li>
+                <li key={ file.url }><File file={ file } /></li>
               )
             }) }
           </ul>
